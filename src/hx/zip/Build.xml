@@ -18,5 +18,7 @@
 
   <target id="haxe">
     <files id="hxcpp_zip_api"/>
+    <files id="hxcpp_zlib_impl" />
+    <files id="zlib_sources" unless="HXCPP_LINK_NO_ZLIB"/>
   </target>
 </xml>
