@@ -1416,7 +1416,6 @@ Dynamic CppiaClassInfo::getStaticValue(const String &inName,hx::PropertyAccess  
          return var.getStaticValue();
    }
 
-   printf("Get static field not found (%s) %s\n", name.c_str(),inName.out_str());
    return null();
 }
 
@@ -1481,7 +1480,6 @@ Dynamic CppiaClassInfo::setStaticValue(const String &inName,const Dynamic &inVal
       }
    }
 
-   printf("Set static field not found (%s) %s\n", name.c_str(), inName.out_str());
    return null();
 
 }
