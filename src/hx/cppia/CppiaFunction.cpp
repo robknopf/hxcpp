@@ -76,7 +76,7 @@ class RelayExpr : public CppiaExpr
          execute = inExecute;
       }
 
-   void runVoid(CppiaCtx *ctx)
+   void runVoid(CppiaCtx *ctx) HXCPP_OVERRIDE
    {
       execute(ctx);
    }
@@ -674,7 +674,7 @@ void ScriptCallable::compile()
 
       compiler->setOnReturn( onReturn, stackSize );
          #ifdef HXCPP_STACK_LINE
-         compiler->setLineOffset( stackSize + offsetof(StackFrame,lineNumber) ); 
+         compiler->setLineOffset( stackSize + offsetof(StackFrame,lineNumber) );
          #endif
       #endif
 
@@ -846,7 +846,7 @@ public:
 
 
 
-   Dynamic __Run(const Array<Dynamic> &inArgs)
+   Dynamic __Run(const Array<Dynamic> &inArgs) HXCPP_OVERRIDE
    {
       CppiaCtx *ctx = CppiaCtx::getCurrent();
 
@@ -864,7 +864,7 @@ public:
    }
 
 #if (HXCPP_API_LEVEL<500)
-   Dynamic __run()
+   Dynamic __run() HXCPP_OVERRIDE
    {
       CppiaCtx *ctx = CppiaCtx::getCurrent();
       AutoStack a(ctx);
@@ -872,7 +872,7 @@ public:
       return doRun(ctx,0);
    }
 
-   Dynamic __run(D a)
+   Dynamic __run(D a) HXCPP_OVERRIDE
    {
       CppiaCtx *ctx = CppiaCtx::getCurrent();
       AutoStack aut(ctx);
@@ -880,7 +880,7 @@ public:
       pushArgDynamic(ctx,0,a);
       return doRun(ctx,1);
    }
-   Dynamic __run(D a,D b)
+   Dynamic __run(D a,D b) HXCPP_OVERRIDE
    {
       CppiaCtx *ctx = CppiaCtx::getCurrent();
       AutoStack aut(ctx);
@@ -889,7 +889,7 @@ public:
       pushArgDynamic(ctx,1,b);
       return doRun(ctx,2);
    }
-   Dynamic __run(D a,D b,D c)
+   Dynamic __run(D a,D b,D c) HXCPP_OVERRIDE
    {
       CppiaCtx *ctx = CppiaCtx::getCurrent();
       AutoStack aut(ctx);
@@ -899,7 +899,7 @@ public:
       pushArgDynamic(ctx,2,c);
       return doRun(ctx,3);
    }
-   Dynamic __run(D a,D b,D c,D d)
+   Dynamic __run(D a,D b,D c,D d) HXCPP_OVERRIDE
    {
       CppiaCtx *ctx = CppiaCtx::getCurrent();
       AutoStack aut(ctx);
@@ -911,7 +911,7 @@ public:
       return doRun(ctx,4);
 
    }
-   Dynamic __run(D a,D b,D c,D d,D e)
+   Dynamic __run(D a,D b,D c,D d,D e) HXCPP_OVERRIDE
    {
       CppiaCtx *ctx = CppiaCtx::getCurrent();
       AutoStack aut(ctx);
@@ -925,7 +925,7 @@ public:
    }
 #endif
 
-   void __Mark(hx::MarkContext *__inCtx)
+   void __Mark(hx::MarkContext *__inCtx) HXCPP_OVERRIDE
    {
       HX_MARK_MEMBER(*getThis());
       char *base = ((char *)this) + sizeof(CppiaClosure);
@@ -933,7 +933,7 @@ public:
          function->captureVars[i]->markClosure(base,__inCtx);
    }
 #ifdef HXCPP_VISIT_ALLOCS
-   void __Visit(hx::VisitContext *__inCtx)
+   void __Visit(hx::VisitContext *__inCtx) HXCPP_OVERRIDE
    {
       HX_VISIT_MEMBER(*getThis());
       char *base = ((char *)this) + sizeof(CppiaClosure);
@@ -941,9 +941,9 @@ public:
          function->captureVars[i]->visitClosure(base,__inCtx);
    }
 #endif
-   virtual void *__GetHandle() const { return *getThis(); }
+   void *__GetHandle() const HXCPP_OVERRIDE { return *getThis(); }
 
-   int __Compare(const hx::Object *inRHS) const
+   int __Compare(const hx::Object *inRHS) const HXCPP_OVERRIDE
    {
       const CppiaClosure *other = dynamic_cast<const CppiaClosure *>(inRHS);
       if (!other)
@@ -953,10 +953,10 @@ public:
 
 
 
-   int __GetType() const { return vtFunction; }
-   int __ArgCount() const { return function->args.size(); }
+   int __GetType() const HXCPP_OVERRIDE { return vtFunction; }
+   int __ArgCount() const HXCPP_OVERRIDE { return function->args.size(); }
 
-   String toString() { return HX_CSTRING("function"); }
+   String toString() HXCPP_OVERRIDE { return HX_CSTRING("function"); }
 };
 
 hx::Object * CPPIA_CALL createClosure(CppiaCtx *ctx, ScriptCallable *inFunction)
