@@ -156,11 +156,13 @@ public:
       gMap.erase(mThreadNumber);
       mBreakpoints = ReleaseBreakpointsLocked(mBreakpoints);
       gMutex.unlock();
+      // reset() clears mThreadNumber: report the thread that's ending, not -1
+      int threadNumber = mThreadNumber;
       reset();
 
       Dynamic handler = hx::g_eventNotificationHandler;
       if (handler != null())
-         handler(mThreadNumber, hx::THREAD_TERMINATED);
+         handler(threadNumber, hx::THREAD_TERMINATED);
    }
 
    void enable(bool inEnable)
