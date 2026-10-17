@@ -47,6 +47,14 @@ namespace
 
         return res;
     }
+
+    template<class T>
+    bool atomic_compare_exchange_strong_discard(std::atomic<T>* obj, typename std::atomic<T>::value_type expected, typename std::atomic<T>::value_type desired)
+    {
+        typename std::atomic<T>::value_type v{ expected };
+
+        return obj->compare_exchange_strong(v, desired);
+    }
 }
 
 static bool sgIsCollecting = false;
@@ -279,7 +287,7 @@ static GcMode sGcMode = gcmFull;
 
 // Allocate this many blocks at a time - this will increase memory usage % when rounding to block size must be done.
 // However, a bigger number makes it harder to release blocks due to pinning
-#define IMMIX_BLOCK_GROUP_BITS  5
+constexpr uint8_t IMMIX_BLOCK_GROUP_BITS{ 5 };
 
 
 #ifdef HXCPP_DEBUG
@@ -487,28 +495,24 @@ extern void scriptMarkStack(hx::MarkContext *);
 */
 
 #ifdef HXCPP_GC_BIG_BLOCKS
-   #define IMMIX_BLOCK_BITS      16
-   typedef unsigned int BlockIdType;
+   constexpr uint8_t IMMIX_BLOCK_BITS{ 16 };
+   using BlockIdType = unsigned int;
 #else
-   #define IMMIX_BLOCK_BITS      15
-   typedef unsigned short BlockIdType;
+   constexpr uint8_t IMMIX_BLOCK_BITS{ 15 };
+   using BlockIdType = unsigned short;
 #endif
 
-#define IMMIX_BLOCK_SIZE        (1<<IMMIX_BLOCK_BITS)
-#define IMMIX_BLOCK_OFFSET_MASK (IMMIX_BLOCK_SIZE-1)
-#define IMMIX_BLOCK_BASE_MASK   (~(size_t)(IMMIX_BLOCK_OFFSET_MASK))
-#define IMMIX_LINE_COUNT_BITS   (IMMIX_BLOCK_BITS-IMMIX_LINE_BITS)
-#define IMMIX_LINES             (1<<IMMIX_LINE_COUNT_BITS)
-
-
-#define IMMIX_HEADER_LINES      (IMMIX_LINES>>IMMIX_LINE_BITS)
-#define IMMIX_USEFUL_LINES      (IMMIX_LINES - IMMIX_HEADER_LINES)
-
-#define IMMIX_MAX_ALLOC_GROUPS_SIZE  (1<<IMMIX_BLOCK_GROUP_BITS)
-
+constexpr uint16_t  IMMIX_BLOCK_SIZE{ 1 << IMMIX_BLOCK_BITS };
+constexpr uint16_t  IMMIX_BLOCK_OFFSET_MASK{ IMMIX_BLOCK_SIZE - 1 };
+constexpr uint8_t   IMMIX_LINE_COUNT_BITS{ IMMIX_BLOCK_BITS - IMMIX_LINE_BITS };
+constexpr uint16_t  IMMIX_LINES{ 1 << IMMIX_LINE_COUNT_BITS };
+constexpr uintptr_t IMMIX_BLOCK_BASE_MASK{ ~uintptr_t{ IMMIX_BLOCK_OFFSET_MASK } };
+constexpr uint8_t   IMMIX_HEADER_LINES{ IMMIX_LINES >> IMMIX_LINE_BITS };
+constexpr uint8_t   IMMIX_USEFUL_LINES{ IMMIX_LINES - IMMIX_HEADER_LINES };
+constexpr uint8_t   IMMIX_MAX_ALLOC_GROUPS_SIZE{ 1 << IMMIX_BLOCK_GROUP_BITS };
 
 // Every second line used
-#define MAX_HOLES (IMMIX_USEFUL_LINES>>1)
+constexpr uint8_t   MAX_HOLES{ IMMIX_USEFUL_LINES >> 1 };
 
 /*
 
@@ -878,8 +882,7 @@ struct BlockDataInfo
       if (mZeroed)
          return false;
 
-      int expected{ 0 };
-      if (mZeroLock.compare_exchange_strong(expected, 1))
+      if (atomic_compare_exchange_strong_discard(&mZeroLock, 0, 1))
          return zeroAndUnlock();
 
       return false;
@@ -1652,8 +1655,7 @@ struct GlobalChunks
       if (inChunk)
          release(inChunk);
 
-      int expected{ 0 };
-      while(false == processListPopLock.compare_exchange_strong(expected, 1))
+      while(false == atomic_compare_exchange_strong_discard(&processListPopLock, 0, 1))
       {
          // Spin
          #ifdef PROFILE_THREAD_USAGE
@@ -1736,8 +1738,7 @@ struct GlobalChunks
 
    inline MarkChunk *alloc()
    {
-      int expected{ 0 };
-      while(false == freeListPopLock.compare_exchange_strong(expected, 1))
+      while(false == atomic_compare_exchange_strong_discard(&freeListPopLock, 0, 1))
       {
          // Spin
          #ifdef PROFILE_THREAD_USAGE
@@ -3390,8 +3391,7 @@ public:
              if (!info->mOwned && info->mMaxHoleSize>=inRequiredBytes)
              {
                 // Acquire the zero-lock
-                int expected{ 0 };
-                if (info->mZeroLock.compare_exchange_strong(expected, 1))
+                if (atomic_compare_exchange_strong_discard(&info->mZeroLock, 0, 1))
                 {
                    // Acquire ownership...
                    if (info->mOwned)
@@ -4812,7 +4812,7 @@ public:
       {
          if ( mAllBlocks[i-1]->mPtr >= mAllBlocks[i]->mPtr)
          {
-            printf("Bad block order block[%d]=%p >= block[%d]=%p / %d\n", i-1, mAllBlocks[i-1]->mPtr,
+            printf("Bad block order block[%d]=%p >= block[%d]=%p / %zu\n", i-1, mAllBlocks[i-1]->mPtr,
                     i, mAllBlocks[i]->mPtr, mAllBlocks.size() );
             DebuggerTrap();
          }
@@ -4827,8 +4827,7 @@ public:
       #ifndef HXCPP_SINGLE_THREADED_APP
       // If we set the flag from 0 -> 0xffffffff then we are the collector
       //  otherwise, someone else is collecting at the moment - so wait...
-      unsigned int expected{ 0 };
-      if (false == hx::gPauseForCollect.compare_exchange_strong(expected, std::numeric_limits<unsigned int>::max()))
+      if (false == atomic_compare_exchange_strong_discard(&hx::gPauseForCollect, 0, std::numeric_limits<unsigned int>::max()))
       {
          if (inLocked)
          {
